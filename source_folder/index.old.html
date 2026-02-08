@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="vi">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Location Radius Map</title>
+  <script src="/_sdk/element_sdk.js"></script>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet">
+
+  <style>@view-transition { navigation: auto; }</style>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+  
+  <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+ </head>
+ <body>
+  <div class="app-wrapper"><!-- Loading Screen -->
+   <div class="loading-screen" id="loadingScreen">
+    <div class="logo-wrapper">
+     <div class="glow-orb"></div>
+     <div class="loading-rings">
+      <div class="ring"></div>
+      <div class="ring"></div>
+      <div class="ring"></div>
+     </div>
+     <div class="orbit-container">
+      <div class="orbit-particle"></div>
+      <div class="orbit-particle"></div>
+      <div class="orbit-particle"></div>
+      <div class="orbit-particle"></div>
+     </div>
+     <div class="loading-logo"><img src="https://lhbs.edu.vn/wp-content/uploads/2021/06/ky-niem-10-nam-lhbs.png" alt="Logo Lạc Hồng" onerror="this.src=''; this.alt='Logo'; this.style.display='none';">
+     </div>
+    </div>
+    <div class="loading-text-container">
+     <div class="loading-text">
+      Đang tải
+     </div>
+     <div class="loading-progress">
+      <div class="loading-progress-bar"></div>
+     </div>
+    </div>
+   </div><!-- Searching Screen -->
+   <div class="searching-screen" id="searchingScreen">
+    <div class="searching-content">
+     <div class="searching-radar-container">
+      <div class="searching-radar">
+       <div class="radar-wave"></div>
+       <div class="radar-wave"></div>
+       <div class="radar-wave"></div>
+       <div class="radar-wave"></div>
+       <div class="radar-sweep"></div>
+       <div class="radar-center"></div>
+      </div>
+      <div class="radar-icon">
+       🔍
+      </div>
+     </div>
+     <h2 class="searching-text">Đang tìm kiếm thiết bị 
+      <div class="searching-dots"><span class="dot"></span> <span class="dot"></span> <span class="dot"></span>
+      </div></h2>
+     <p class="searching-subtext">Vui lòng chờ trong giây lát...</p>
+     <div class="searching-progress-ring">
+      <svg class="progress-ring-circle"><circle class="progress-ring-bg" cx="60" cy="60" r="50"></circle> <circle class="progress-ring-fill" cx="60" cy="60" r="50"></circle>
+      </svg>
+      <div class="progress-percentage" id="progressPercentage">
+       0%
+      </div>
+     </div>
+    </div>
+   </div><!-- Device ID Screen -->
+   <div class="device-id-screen" id="deviceIdScreen">
+    <div class="device-id-container">
+     <div class="device-id-card">
+      <div class="device-id-header">
+       <div class="device-id-icon">
+        🔑
+       </div>
+       <h1 class="device-id-title">Xác Thực Thiết Bị</h1>
+       <p class="device-id-subtitle">Vui lòng nhập ID thiết bị của bạn để tiếp tục</p>
+      </div>
+      <div class="device-id-input-group"><label class="device-id-input-label" for="deviceIdInput">ID Thiết Bị</label>
+       <div class="device-id-input-wrapper"><input type="text" id="deviceIdInput" class="device-id-input" placeholder="Nhập ID thiết bị" autocomplete="off">
+       </div>
+      </div><button class="device-id-submit" id="deviceIdSubmit"> <span>Tiếp tục</span> <span>→</span> </button>
+     </div>
+    </div>
+   </div><!-- Selection Screen -->
+   <div class="selection-screen" id="selectionScreen">
+    <div class="selection-container">
+     <div class="selection-card">
+      <div class="selection-header">
+       <h1 class="selection-title" id="pageTitle">Bản Đồ Khu Vực</h1>
+       <p class="selection-subtitle">Chọn bán kính để hiển thị khu vực xung quanh địa điểm</p>
+      </div>
+      <div class="radius-grid">
+       <div class="radius-card" data-radius="500"><span class="radius-icon">✅</span>
+        <div class="radius-value">
+         500m
+        </div>
+        <div class="radius-label">
+         Khu vực gần
+        </div>
+       </div>
+       <div class="radius-card" data-radius="1000"><span class="radius-icon">✅</span>
+        <div class="radius-value">
+         1km
+        </div>
+        <div class="radius-label">
+         Khu vực vừa
+        </div>
+       </div>
+       <div class="radius-card" data-radius="2000"><span class="radius-icon">✅</span>
+        <div class="radius-value">
+         2km
+        </div>
+        <div class="radius-label">
+         Khu vực rộng
+        </div>
+       </div>
+       <div class="radius-card" data-radius="5000"><span class="radius-icon">✅</span>
+        <div class="radius-value">
+         5km
+        </div>
+        <div class="radius-label">
+         Khu vực xa
+        </div>
+       </div>
+      </div>
+      <div class="divider"><span class="divider-text">Hoặc</span>
+      </div>
+      <div class="custom-input-group"><label class="custom-input-label" for="customRadius">Tùy chỉnh bán kính</label>
+       <div class="custom-input-wrapper"><input type="number" id="customRadius" class="custom-input" placeholder="Nhập giá trị từ 100 - 10000" min="100" max="10000"> <span class="input-unit">mét</span>
+       </div>
+      </div><button class="action-button" id="submitBtn"> <span>Xem bản đồ</span> <span>→</span> </button>
+     </div>
+    </div>
+   </div><!-- Map Screen -->
+   <div class="map-screen" id="mapScreen">
+    <div class="map-top-bar">
+     <div class="map-content">
+      <div class="map-logo"><img src="https://lhbs.edu.vn/wp-content/uploads/2021/06/ky-niem-10-nam-lhbs.png" alt="Logo Lạc Hồng" onerror="this.src=''; this.alt='Logo'; this.style.display='none';">
+      </div>
+      <div class="map-info-wrapper">
+       <h2 class="map-heading" id="mapTitle">Bản Đồ Khu Vực</h2>
+       <div class="map-location-info"><span class="location-icon">📍</span> <span id="locationNameDisplay">Trường Song Ngữ Lạc Hồng</span>
+       </div>
+       <div class="map-location-info" style="margin-top: 4px;"><span class="location-icon">📌</span> <span id="locationAddressDisplay">152/16 Huỳnh Văn Nghệ, Bửu Long, Biên Hòa, Đồng Nai</span>
+       </div>
+      </div>
+     </div>
+    </div>
+    <div class="map-view">
+        <div class="controls-panel">
+            <button class="control-button" id="backBtn"> <span class="button-icon">←</span> <span>Quay lại</span> </button> <button class="control-button" id="drawRouteBtn"> <span class="button-icon">✏️</span> <span>Vẽ tuyến đường</span> </button> <button class="control-button" id="testRouteBtn" style="display: none;"> <span class="button-icon">🚶</span> <span>Test theo đường</span> </button> <button class="control-button" id="testStayBtn"> <span class="button-icon">⏰</span> <span>Test đứng lâu (60p)</span> </button> <button class="control-button" id="testIntrusionBtn"> <span class="button-icon">🧪</span> <span>Kiểm tra xâm nhập</span> </button>
+            <div class="flex flex-col gap-2 p-4 bg-slate-50 rounded-2xl mt-4 border border-slate-200">
+                <label class="text-sm font-bold text-slate-700">Thiết lập Vùng An Toàn (mét):</label>
+                <input type="number" id="safeZoneRadius" value="100" class="w-full p-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none">
+
+                <button id="connectEspBtn" onclick="startRealTimeTracking()"
+                        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 transform active:scale-95">
+                    📡 Kết nối ESP32 & Kích hoạt Safe Zone
+                </button>
+                <button id="checkIntrusionBtn" onclick="checkEspIntrusion()" 
+                        class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 mt-2">
+                    🔍 Kiểm tra xâm nhập ngay
+                </button>
+                <div class="flex items-center gap-2 mt-1">
+                    <input type="checkbox" id="autoFollowCheckbox" class="w-4 h-4 cursor-pointer">
+                    <label for="autoFollowCheckbox" class="text-sm font-medium cursor-pointer text-slate-600">Tự động bám theo vị trí</label>
+                </div>
+            </div>
+            <button onclick="clearAllSafeZones()" class="w-full bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg mt-2 text-sm">
+                🗑️ Xóa tất cả vùng an toàn
+            </button>
+            <div style="margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <input type="checkbox" id="autoFollowCheckbox" style="width: 18px; height: 18px; cursor: pointer;">
+                <label for="autoFollowCheckbox" style="font-weight: 600; cursor: pointer; color: #1e293b;">Tự động cuộn theo xe</label>
+            </div>
+
+            <button class="control-button danger" id="deleteRouteBtn" style="display: none;">
+                <span class="button-icon">🗑️</span>
+                <span>Xóa Tuyến Đường</span>
+            </button>
+
+            <button id="stopTestsBtn" class="action-btn danger" style="display: none;">
+                <span class="button-icon">🛑</span><span>Dừng Kiểm Tra</span>
+            </button>
+        </div>
+     <div class="circles-list-panel" id="circlesListPanel" style="display: none;">
+      <div class="circles-list-title">
+       Danh sách vòng tròn (<span id="circleCount">0</span>/10)
+      </div>
+      <div id="circlesList"></div>
+     </div>
+     <div class="info-panel" id="infoPanel">
+      <div class="info-title">
+       Thông tin khu vực
+      </div>
+      <div class="info-row"><span class="info-label">Bán kính:</span> <span class="info-value" id="radiusDisplay">-</span>
+      </div>
+      <div class="info-row"><span class="info-label">Diện tích:</span> <span class="info-value" id="areaDisplay">-</span>
+      </div>
+     </div>
+     <div id="map"></div>
+    </div>
+   </div>
+  </div>
+  
+    <script src="notification.js"></script>
+  <script src="app.js"></script>
+ </body>
+</html>

@@ -1,0 +1,5 @@
+{
+  "name": "GPS Guardian",
+  "description": "A comprehensive GPS tracking and safe-zone monitoring dashboard for ESP32 devices.",
+  "requestFramePermissions": []
+}
