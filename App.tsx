@@ -278,17 +278,27 @@ const App: React.FC = () => {
           }
           newSpeed = 0;
         } else if (prevSim.type === 'intrusion') {
-          const angle = prevSim.direction ?? 45;
-          const radians = (angle * Math.PI) / 180;
-          // Calculate step based on simSpeed (km/h -> degrees per step)
-          // Assuming 200ms interval, speed in km/h needs to be converted
-          // 1 degree of latitude ≈ 111.32 km
-          // step = (speed km/h) / (111.32 km/deg) / (3600s/h) * (0.2s/step)
           const speedKmh = prevSim.simSpeed ?? 35;
-          const step = (speedKmh / 111.32 / 3600) * 200; // 200ms interval
-          newLat += step * Math.cos(radians);
-          newLng += step * Math.sin(radians);
-          newSpeed = speedKmh;
+
+          // Nếu tốc độ = 0, giữ nguyên vị trí (đứng yên)
+          if (speedKmh === 0) {
+            newSpeed = 0;
+          } else {
+            const angle = prevSim.direction ?? 45;
+            const radians = (angle * Math.PI) / 180;
+
+            // Calculate step based on simSpeed (km/h -> degrees per step)
+            // Simulation interval is 500ms (0.5 seconds)
+            // 1 degree of latitude ≈ 111.32 km
+            // Base formula: step = (speed km/h) / (111.32 km/deg) / (3600 s/h) * (0.5 s/step)
+            // Multiplied by scale factor for visible movement on map
+            const scaleFactor = 100; // Adjustable for map visualization
+            const step = (speedKmh / 111.32 / 3600) * 0.05 * scaleFactor;
+
+            newLat += step * Math.cos(radians);
+            newLng += step * Math.sin(radians);
+            newSpeed = speedKmh;
+          }
         } else if (prevSim.type === 'route') {
           // Get first active confirmed route for simulation
           const activeRoute = routes.find(r => r.active && r.confirmed);
@@ -451,11 +461,6 @@ const App: React.FC = () => {
     setShowDirectionPicker(false);
   }, []);
 
-  const handleDirectionSelect = useCallback((direction: number, speed: number) => {
-    setShowDirectionPicker(false);
-    // Reuse handleStartSimulation logic
-    handleStartSimulation('intrusion', direction, speed);
-  }, []);
 
   // Modified handleAddZone to support double click position
   const handleAddZone = useCallback(async (zoneData: Partial<SafeZone>) => {
@@ -603,6 +608,39 @@ const App: React.FC = () => {
     };
     addLog(`🎮 Bắt đầu mô phỏng: ${typeNames[type]}`, 'info');
   }, [addLog, gps.lat, gps.lng]);
+
+  const handleDirectionSelect = useCallback((direction: number, speed: number) => {
+    console.log('📍 handleDirectionSelect called with direction:', direction, 'speed:', speed);
+    setShowDirectionPicker(false);
+
+    // Reset connection and intervals
+    setIsConnected(false);
+    if (trackingIntervalRef.current) {
+      clearInterval(trackingIntervalRef.current);
+      trackingIntervalRef.current = null;
+    }
+
+    // Reset alert flags
+    alertTriggeredRef.current = false;
+    stayLongAlertSentRef.current = false;
+    routeDeviationAlertSentRef.current = false;
+
+    // Clear timers
+    if (stayLongTimerRef.current) {
+      clearTimeout(stayLongTimerRef.current);
+      stayLongTimerRef.current = null;
+    }
+    if (routeDeviationTimerRef.current) {
+      clearTimeout(routeDeviationTimerRef.current);
+      routeDeviationTimerRef.current = null;
+    }
+
+    // Set simulation state with speed
+    console.log('📍 Setting simState with simSpeed:', speed);
+    setSimState({ isActive: true, type: 'intrusion', progress: 0, direction, simSpeed: speed });
+
+    addLog(`🎮 Bắt đầu mô phỏng: Xâm nhập (hướng ${direction}°, tốc độ ${speed} km/h)`, 'info');
+  }, [addLog]);
 
   const handleStopSimulation = useCallback(() => {
     if (simulationIntervalRef.current) {
@@ -805,7 +843,7 @@ const App: React.FC = () => {
 
         {/* Simulation Status Overlay */}
         {simState.isActive && (
-          <div className="absolute top-4 right-4 bg-white dark:bg-dark-card shadow-lg rounded-xl p-3 md:p-4 z-10 border border-gray-200 dark:border-gray-700 max-w-[200px] md:max-w-none">
+          <div className="absolute top-4 right-4 bg-white dark:bg-dark-card shadow-lg rounded-xl p-3 md:p-4 z-[2000] border border-gray-200 dark:border-gray-700 max-w-[200px] md:max-w-none">
             <div className="flex items-center gap-2 md:gap-3">
               <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse flex-shrink-0" />
               <div className="min-w-0 flex-1">

@@ -137,8 +137,21 @@ const MapHoverTooltip = () => {
   );
 };
 
-// Custom Search Component
-const CustomSearchBar: React.FC<{ sidebarLeft: number }> = ({ sidebarLeft }) => {
+// Pinned location type
+interface PinnedLocation {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+}
+
+// Custom Search Component with Pin feature
+const CustomSearchBar: React.FC<{
+  sidebarLeft: number;
+  pinnedLocations: PinnedLocation[];
+  onPinLocation: (location: PinnedLocation) => void;
+  onRemovePin: (id: string) => void;
+}> = ({ sidebarLeft, pinnedLocations, onPinLocation, onRemovePin }) => {
   const map = useMap();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<any[]>([]);
@@ -172,8 +185,20 @@ const CustomSearchBar: React.FC<{ sidebarLeft: number }> = ({ sidebarLeft }) => 
     setQuery(result.label);
   };
 
+  const handlePin = (result: any) => {
+    const newPin: PinnedLocation = {
+      id: Date.now().toString(),
+      name: result.label,
+      lat: result.y,
+      lng: result.x
+    };
+    onPinLocation(newPin);
+    map.flyTo([result.y, result.x], 16);
+    setResults([]);
+    setQuery('');
+  };
+
   // Calculate search bar width: min 200px, max 200 + sidebarLeft
-  // Left edge follows sidebar, right edge stays at 200 + 16px from sidebar edge
   const searchBarWidth = Math.max(200, 200 + sidebarLeft * 0.3);
 
   return (
@@ -181,8 +206,8 @@ const CustomSearchBar: React.FC<{ sidebarLeft: number }> = ({ sidebarLeft }) => 
       ref={searchRef}
       className="fixed top-4 z-[1000] transition-all duration-300"
       style={{
-        left: sidebarLeft + 16, // 16px from sidebar edge
-        width: Math.min(searchBarWidth, 400), // Max 400px
+        left: sidebarLeft + 16,
+        width: Math.min(searchBarWidth, 400),
         minWidth: 200,
       }}
     >
@@ -196,20 +221,62 @@ const CustomSearchBar: React.FC<{ sidebarLeft: number }> = ({ sidebarLeft }) => 
         />
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
         {isSearching && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center">
+            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          </div>
         )}
       </form>
 
       {results.length > 0 && (
         <div className="absolute top-full left-0 right-0 mt-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-xl shadow-xl border border-white/20 dark:border-gray-700 overflow-hidden max-h-60 overflow-y-auto">
           {results.map((result, idx) => (
-            <button
+            <div
               key={idx}
-              onClick={() => handleSelect(result)}
-              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-0 dark:text-gray-200"
+              className="flex items-center justify-between px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-0"
             >
-              {result.label}
-            </button>
+              <button
+                onClick={() => handleSelect(result)}
+                className="flex-1 text-left dark:text-gray-200 truncate pr-2"
+              >
+                {result.label}
+              </button>
+              <button
+                onClick={() => handlePin(result)}
+                className="flex-shrink-0 p-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary transition-colors"
+                title="Ghim vị trí"
+              >
+                📍
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Pinned locations list */}
+      {pinnedLocations.length > 0 && results.length === 0 && (
+        <div className="absolute top-full left-0 right-0 mt-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-xl shadow-xl border border-white/20 dark:border-gray-700 overflow-hidden max-h-40 overflow-y-auto">
+          <div className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-xs font-medium text-gray-500 dark:text-gray-400">
+            📌 Vị trí đã ghim ({pinnedLocations.length})
+          </div>
+          {pinnedLocations.map((pin) => (
+            <div
+              key={pin.id}
+              className="flex items-center justify-between px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-0"
+            >
+              <button
+                onClick={() => map.flyTo([pin.lat, pin.lng], 16)}
+                className="flex-1 text-left dark:text-gray-200 truncate pr-2 text-xs"
+              >
+                {pin.name.substring(0, 40)}...
+              </button>
+              <button
+                onClick={() => onRemovePin(pin.id)}
+                className="flex-shrink-0 p-1 rounded text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-xs"
+                title="Xóa ghim"
+              >
+                ✕
+              </button>
+            </div>
           ))}
         </div>
       )}
@@ -294,6 +361,30 @@ const Map: React.FC<MapComponentProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [activeLayer, setActiveLayer] = useState('osm');
+  const [pinnedLocations, setPinnedLocations] = useState<PinnedLocation[]>([]);
+
+  const handlePinLocation = (location: PinnedLocation) => {
+    setPinnedLocations(prev => [...prev, location]);
+  };
+
+  const handleRemovePin = (id: string) => {
+    setPinnedLocations(prev => prev.filter(p => p.id !== id));
+  };
+
+  // Custom icon for pinned locations
+  const PinnedIcon = L.divIcon({
+    className: 'pinned-location-marker',
+    html: `
+      <div style="position: relative; width: 30px; height: 40px;">
+        <svg viewBox="0 0 24 24" width="30" height="40" fill="#ef4444" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
+          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+        </svg>
+      </div>
+    `,
+    iconSize: [30, 40],
+    iconAnchor: [15, 40],
+    popupAnchor: [0, -40]
+  });
 
   return (
     <div ref={containerRef} className="w-full h-full absolute inset-0" style={{ minHeight: '100vh' }}>
@@ -303,7 +394,7 @@ const Map: React.FC<MapComponentProps> = ({
         style={{ height: '100%', width: '100%', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
         zoomControl={false}
         scrollWheelZoom={true}
-        doubleClickZoom={false} // Disable default double click zoom to handle zone creation
+        doubleClickZoom={false}
       >
         <ZoomControl position="bottomright" />
 
@@ -321,7 +412,12 @@ const Map: React.FC<MapComponentProps> = ({
           />
         )}
 
-        <CustomSearchBar sidebarLeft={sidebarLeft} />
+        <CustomSearchBar
+          sidebarLeft={sidebarLeft}
+          pinnedLocations={pinnedLocations}
+          onPinLocation={handlePinLocation}
+          onRemovePin={handleRemovePin}
+        />
         <CustomLayerSwitcher currentLayer={activeLayer} onLayerChange={setActiveLayer} />
         <MapHoverTooltip />
 
@@ -329,6 +425,36 @@ const Map: React.FC<MapComponentProps> = ({
         <MapResizer />
         <MapController center={[gps.lat, gps.lng]} autoCenter={settings.autoCenter} />
         <MapEvents onClick={onMapClick} onDoubleClick={onMapDoubleClick || (() => { })} />
+
+        {/* Pinned Location Markers */}
+        {pinnedLocations.map(pin => (
+          <Marker
+            key={pin.id}
+            position={[pin.lat, pin.lng]}
+            icon={PinnedIcon}
+          >
+            <Popup>
+              <div className="text-sm p-1 min-w-[200px]">
+                <p className="font-bold text-gray-800 mb-2 text-base">📍 Vị trí đã ghim</p>
+                <p className="text-gray-600 text-xs mb-1 break-words">{pin.name}</p>
+                <div className="border-t border-gray-200 pt-2 mt-2">
+                  <p className="text-gray-500 text-xs">
+                    <span className="font-medium">Lat:</span> <span className="font-mono">{pin.lat.toFixed(5)}</span>
+                  </p>
+                  <p className="text-gray-500 text-xs">
+                    <span className="font-medium">Lng:</span> <span className="font-mono">{pin.lng.toFixed(5)}</span>
+                  </p>
+                </div>
+                <button
+                  onClick={() => handleRemovePin(pin.id)}
+                  className="mt-3 w-full py-1.5 bg-red-100 hover:bg-red-200 text-red-600 text-xs font-medium rounded-lg transition-colors"
+                >
+                  🗑️ Xóa ghim
+                </button>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
 
         {/* Current Position Marker */}
         <Marker position={[gps.lat, gps.lng]} icon={CurrentPositionIcon}>

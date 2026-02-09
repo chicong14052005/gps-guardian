@@ -1,6 +1,6 @@
 # 🛡️ GPS Guardian
 
-##Hệ thống giám sát GPS thời gian thực với ESP32 và Web App.
+## Hệ thống giám sát GPS thời gian thực với ESP32 và Web App.
 
 ## 📋 Mô tả
 

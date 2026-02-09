@@ -59,7 +59,7 @@ interface SidebarProps {
 const ModalPortal: React.FC<{ children: React.ReactNode; isOpen: boolean }> = ({ children, isOpen }) => {
   if (!isOpen) return null;
   return createPortal(
-    <div onClick={(e) => e.stopPropagation()}>
+    <div onClick={(e) => e.stopPropagation()} style={{ position: 'relative', zIndex: 99999 }}>
       {children}
     </div>,
     document.body
@@ -157,9 +157,9 @@ const Sidebar: React.FC<SidebarProps> = ({
     setShowDirectionPicker(true);
   }, []);
 
-  const handleDirectionSelect = useCallback((direction: number) => {
+  const handleDirectionSelect = useCallback((direction: number, speed: number) => {
     setShowDirectionPicker(false);
-    onStartSimulation('intrusion', direction);
+    onStartSimulation('intrusion', direction, speed);
   }, [onStartSimulation]);
 
   const handleCloseZoneEditor = useCallback(() => {
@@ -444,8 +444,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                       <div
                         key={route.id}
                         className={`p-3 rounded-lg border transition-all ${editingRouteId === route.id
-                            ? 'border-primary bg-primary/5'
-                            : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
+                          ? 'border-primary bg-primary/5'
+                          : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
                           }`}
                       >
                         <div className="flex items-center gap-2">
